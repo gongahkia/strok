@@ -1,0 +1,4 @@
+*.love
+makelove-build/
+
+.DS_Store
