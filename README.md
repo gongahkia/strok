@@ -64,7 +64,7 @@ Fresh-source install, one line: macOS `brew install cmake pkg-config ffmpeg free
 
 ## Runtime notes
 
-With audio present in local files, video is paced from the audio playback clock. Remote streams and camera input use wall-clock pacing to avoid full audio predecode before playback. Late video frames are dropped once they fall too far behind the clock, capped at 50ms, so playback holds sync instead of accumulating lag. `--max-fps N` decimates rendered video frames for slow terminals while audio continues; `--log FILE` records rendered/dropped frame counts and drift.
+With audio present in local files, video is paced from the audio playback clock. Camera and RTSP/RTSPS input decode on a worker thread into a two-frame latest-only queue: the renderer discards older queued frames and renders the newest available frame, avoiding unbounded capture backlog. Frames that are already late by more than one source interval (capped at 50ms) are discarded before rendering. `--max-fps N` limits presentation for these live inputs as well as audio-backed playback; `--log FILE` records rendered/dropped frame counts and live queue/latency diagnostics when `--debug-stats` is enabled.
 
 Structure overlay replaces high-edge cell glyphs while preserving the active blitter colors. `--structure-overlay auto` enables it for `--mode structure` or structure-tuning flags, `on` forces it for modes such as octant/sextant/braille/halfblock/blocks, and `off` disables it. `--line-ligatures` post-processes structure edges into box-drawing joins. `--edge-strength 0` disables edge picks, values below `1` make edges stricter, and values above `1` make edges more aggressive.
 
@@ -84,7 +84,7 @@ Layout: `--width` and `--height` set render bounds, `--fit` clamps those bounds 
 
 Stream inputs: direct FFmpeg URLs such as HLS/HTTP/RTSP are passed through to libav. YouTube URLs require `yt-dlp`; strok resolves them with `yt-dlp -g` and fails with a clear install/direct-URL message when it is missing. Set `STROK_YTDLP` to override the resolver binary path.
 
-Camera inputs: use `--input cam` for the platform default (`avfoundation` on macOS, `v4l2` on Linux, `dshow` on Windows) or pass an explicit device alias such as `avfoundation:0`, `v4l2:/dev/video0`, or `dshow:video=Integrated Camera`. Live capture requests 640x480 at 30 fps for low-latency structure analysis. Camera playback mirrors horizontally by default; pass `--no-mirror` for sensor-native orientation.
+Camera inputs: use `--input cam` for the platform default (`avfoundation` on macOS, `v4l2` on Linux, `dshow` on Windows) or pass an explicit device alias such as `avfoundation:0`, `v4l2:/dev/video0`, or `dshow:video=Integrated Camera`. Live capture requests 640x480 at 30 fps for low-latency structure analysis. The two-frame queue bounds decoded-frame backlog, but slow rendering or terminal writes can still add per-frame latency; `--debug-stats` reports that capture-to-present time. Camera playback mirrors horizontally by default; pass `--no-mirror` for sensor-native orientation.
 
 Capability detection uses environment variables, an allowlist, and optional FreeType font cmap checks only; it does not issue terminal query escapes. `--caps dump` prints the resolved capability set; override specs are comma-separated, for example `--caps unicode=16,octant,truecolor`.
 
