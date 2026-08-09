@@ -123,6 +123,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Authenticate Homebrew source checkout
+        env:
+          STROK_REPOSITORY_TOKEN: ${{ github.token }}
+        run: |
+          git config --global url."https://x-access-token:${STROK_REPOSITORY_TOKEN}@github.com/${GITHUB_REPOSITORY}.git".insteadOf "https://github.com/${GITHUB_REPOSITORY}.git"
+
       - name: Install formula from source
         run: |
           brew untap local/strok >/dev/null 2>&1 || true
